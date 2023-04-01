@@ -1,0 +1,27 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workspace": {
+            "type": "String",
+            "metadata": {
+                "description": "Log Analytics Workspace Name"
+            }
+        }
+    },
+    "resources": [
+        {
+            "properties": {
+                "etag": "*",
+                "category": "SignInLogs",
+                "displayName": "UnifiedSignInLogs",
+                "query": "union isfuzzy=true SigninLogs, AADNonInteractiveUserSignInLogs\r\n// normalize logs\r\n| extend ConditionalAccessPolicies = iff(isempty( ConditionalAccessPolicies_dynamic ), todynamic(ConditionalAccessPolicies_string), ConditionalAccessPolicies_dynamic)\r\n| extend Status = iff(isempty( Status_dynamic ), todynamic(Status_string), Status_dynamic)\r\n| extend MfaDetail = iff(isempty( MfaDetail_dynamic ), todynamic(MfaDetail_string), MfaDetail_dynamic)\r\n| extend DeviceDetail = iff(isempty( DeviceDetail_dynamic ), todynamic(DeviceDetail_string), DeviceDetail_dynamic)\r\n| extend LocationDetails = iff(isempty( LocationDetails_dynamic ), todynamic(LocationDetails_string), LocationDetails_dynamic)\r\n| project-away *_dynamic, *_string",
+                "functionAlias": "UnifiedSignInLogs",
+                "version": 3
+            },
+            "name": "[concat(parameters('workspace'),'/a4b6a01b-ef1d-49ea-b574-d48d30bf6319_unifiedsigninlogs')]",
+            "type": "Microsoft.OperationalInsights/workspaces/savedSearches",
+            "apiVersion": "2020-08-01"
+        }
+    ]
+}
