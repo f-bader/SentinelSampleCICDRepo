@@ -1,0 +1,75 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workspace": {
+      "type": "String"
+    }
+  },
+  "resources": [
+    {
+      "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/5354125d-37a5-41d2-b065-2ea38194a51d')]",
+      "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/5354125d-37a5-41d2-b065-2ea38194a51d')]",
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "kind": "Scheduled",
+      "apiVersion": "2022-10-01-preview",
+      "properties": {
+        "displayName": "Azure VM Run Command or Custom Script execution detected",
+        "alertRuleTemplateName": "5354125d-37a5-41d2-b065-2ea38194a51d",
+        "techniques": [
+          "T1059"
+        ],
+        "description": "A user has either initiated a Azure VM Run Command or Custom Script execution",
+        "severity": "Medium",
+        "enabled": true,
+        "query": "AzureActivity \r\n| where CategoryValue == \"Administrative\"\r\n| where OperationNameValue =~ \"Microsoft.Compute/virtualMachines/runCommand/action\"\r\n| extend VMName = tostring(todynamic(Properties).resource)\r\n| summarize make_list(ActivityStatusValue), TimeGenerated = max(TimeGenerated) by CorrelationId, CallerIpAddress, Caller, ResourceGroup, VMName",
+        "queryFrequency": "PT30M",
+        "queryPeriod": "PT35M",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT5H",
+        "suppressionEnabled": false,
+        "tactics": [
+          "Execution",
+          "LateralMovement"
+        ],
+        "incidentConfiguration": {
+          "groupingConfiguration": {
+            "matchingMethod": "AllEntities",
+            "enabled": false,
+            "groupByEntities": [],
+            "lookbackDuration": "PT5H",
+            "reopenClosedIncident": false,
+            "groupByCustomDetails": [],
+            "groupByAlertDetails": []
+          },
+          "createIncident": true
+        },
+        "eventGroupingSettings": {
+          "aggregationKind": "AlertPerResult"
+        },
+        "entityMappings": [
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "AadUserId",
+                "columnName": "Caller"
+              }
+            ]
+          },
+          {
+            "entityType": "Host",
+            "fieldMappings": [
+              {
+                "identifier": "HostName",
+                "columnName": "VMName"
+              }
+            ]
+          }
+        ],
+        "customDetails": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+name: Sentinel Pester Framework
+
+on:
+  schedule:
+    - cron:  '30 10 * * *'
+
+  workflow_dispatch:
+
+env:
+  resourceGroupName: ${{ vars.RESOURCEGROUPNAME }}
+  workspaceName: ${{ vars.WORKSPACENAME }}
+  subscriptionId: ${{ vars.SUBSCRIPTIONID }}
+
+jobs:
+  test-results:
+    name: Test Results (reference)
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      pull-requests: write
+      actions: read
+
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_SENTINEL_CREDENTIALS_9054a532972f409f8e3375abaf6c8134 }}
+          enable-AzPSSession: true
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Run Sentinel Pester Framework
+        shell: pwsh
+        run: |
+          ${{ github.workspace }}/RunTest-CICD.ps1
+
+      - name: Publish Test Results
+        id: test-results
+        uses: EnricoMi/publish-unit-test-result-action/composite@master
+        if: always()
+        with:
+          check_name: Test Results
+          files: "testResults.xml"

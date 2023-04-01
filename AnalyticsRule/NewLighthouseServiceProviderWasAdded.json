@@ -1,0 +1,80 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workspace": {
+      "type": "String"
+    }
+  },
+  "resources": [
+    {
+      "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/0193072c-afc9-4fd1-ac9a-c4add164e40d')]",
+      "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/0193072c-afc9-4fd1-ac9a-c4add164e40d')]",
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "kind": "Scheduled",
+      "apiVersion": "2022-10-01-preview",
+      "properties": {
+        "displayName": "A new Lighthouse service provider was added",
+        "alertRuleTemplateName": "0193072c-afc9-4fd1-ac9a-c4add164e40d",
+        "description": "A service provider was added using Lighthouse",
+        "severity": "Informational",
+        "enabled": true,
+        "query": "AzureActivity\n| where OperationNameValue =~ \"Microsoft.ManagedServices/registrationAssignments/Write\"\n| extend timestamp = TimeGenerated, AccountCustomEntity = Caller, IPCustomEntity = CallerIpAddress",
+        "queryFrequency": "PT30M",
+        "queryPeriod": "PT30M",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT5H",
+        "suppressionEnabled": false,
+        "tactics": [
+          "Persistence"
+        ],
+        "incidentConfiguration": {
+          "groupingConfiguration": {
+            "matchingMethod": "AllEntities",
+            "enabled": false,
+            "groupByEntities": [],
+            "lookbackDuration": "PT5H",
+            "reopenClosedIncident": false,
+            "groupByCustomDetails": [],
+            "groupByAlertDetails": []
+          },
+          "createIncident": true
+        },
+        "eventGroupingSettings": {
+          "aggregationKind": "SingleAlert"
+        },
+        "entityMappings": [
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "AccountCustomEntity"
+              }
+            ]
+          },
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "IPCustomEntity"
+              }
+            ]
+          },
+          {
+            "entityType": "AzureResource",
+            "fieldMappings": [
+              {
+                "identifier": "ResourceId",
+                "columnName": "SubscriptionId"
+              }
+            ]
+          }
+        ],
+        "customDetails": null
+      }
+    }
+  ]
+}

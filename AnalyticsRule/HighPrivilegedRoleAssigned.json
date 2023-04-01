@@ -1,0 +1,73 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workspace": {
+      "type": "String"
+    }
+  },
+  "resources": [
+    {
+      "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/fa2dbd7d-0db5-4b9e-91f8-8547e6059050')]",
+      "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/fa2dbd7d-0db5-4b9e-91f8-8547e6059050')]",
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "kind": "Scheduled",
+      "apiVersion": "2022-10-01-preview",
+      "properties": {
+        "displayName": "High Privileged Role assigned",
+        "alertRuleTemplateName": "fa2dbd7d-0db5-4b9e-91f8-8547e6059050",
+        "description": "A user was assigned a high privileged role",
+        "severity": "Low",
+        "enabled": true,
+        "query": "let HighPrivRoles = dynamic([\"Global Administrator\",\"Company Administrator\",\"Privileged Authentication Administrator\",\"Privileged Role Administrator\"]);\nAuditLogs\n| where OperationName == \"Add member to role\"\n| mv-expand TargetResources\n| mv-expand TargetResources.modifiedProperties\n| where TargetResources_modifiedProperties.name == \"Role.name\"\n| extend AddedToRole = replace_string(tostring(TargetResources_modifiedProperties.newValue),'\"','')\n| where AddedToRole in~ (HighPrivRoles)\n| extend Actor = iff(isnotempty(InitiatedBy.user.userPrincipalName),InitiatedBy.user.userPrincipalName,InitiatedBy.app.servicePrincipalId)\n| extend TargetUsername = TargetResources.userPrincipalName\n",
+        "queryFrequency": "PT30M",
+        "queryPeriod": "PT30M",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT5H",
+        "suppressionEnabled": false,
+        "tactics": [
+          "PrivilegeEscalation"
+        ],
+        "incidentConfiguration": {
+          "groupingConfiguration": {
+            "matchingMethod": "AllEntities",
+            "enabled": false,
+            "groupByEntities": [],
+            "lookbackDuration": "PT5H",
+            "reopenClosedIncident": false,
+            "groupByCustomDetails": [],
+            "groupByAlertDetails": []
+          },
+          "createIncident": true
+        },
+        "eventGroupingSettings": {
+          "aggregationKind": "AlertPerResult"
+        },
+        "customDetails": {
+          "AddedToRole": "AddedToRole"
+        },
+        "entityMappings": [
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "Actor"
+              }
+            ]
+          },
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "TargetUsername"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

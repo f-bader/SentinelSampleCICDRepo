@@ -1,0 +1,74 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workspace": {
+      "type": "String"
+    }
+  },
+  "resources": [
+    {
+      "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/c44269aa-9879-42d9-a8f4-56a93bb8c6ac')]",
+      "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/c44269aa-9879-42d9-a8f4-56a93bb8c6ac')]",
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "kind": "Scheduled",
+      "apiVersion": "2022-10-01-preview",
+      "properties": {
+        "displayName": "Dangerous API permission consented",
+        "alertRuleTemplateName": "c44269aa-9879-42d9-a8f4-56a93bb8c6ac",
+        "description": "One or more high priv API permission were granted to an application.\n\nCheck if this is really necessary and otherwise remove the permissions\n",
+        "severity": "High",
+        "enabled": true,
+        "query": "let DangerousPermissions = dynamic([\"AppRoleAssignment.ReadWrite.All\",\"Application.ReadWrite.All\",\"RoleManagement.ReadWrite.Directory\"]);\nAuditLogs\n| where OperationName == \"Add app role assignment to service principal\"\n| where Result =~ \"success\"\n| mv-expand TargetResources\n| mv-expand TargetResources.modifiedProperties\n| where TargetResources_modifiedProperties.name == \"AppRole.Value\"\n| extend InitiatingUserOrApp = tostring(InitiatedBy.user.userPrincipalName)\n| extend InitiatingIpAddress = tostring(InitiatedBy.user.ipAddress)\n| extend UserAgent = iff(AdditionalDetails[0].key == \"User-Agent\",tostring(AdditionalDetails[0].value),\"\")\n| extend AddedPermission = replace_string(tostring(TargetResources_modifiedProperties.newValue),'\"','')\n| where AddedPermission in~ ( DangerousPermissions )\n| mv-expand TargetResources.modifiedProperties\n| where TargetResources_modifiedProperties.name == \"ServicePrincipal.ObjectID\"\n| extend ServicePrincipalObjectID = replace_string(tostring(TargetResources_modifiedProperties.newValue),'\"','')\n| extend timestamp = TimeGenerated, AccountCustomEntity = InitiatingUserOrApp, IPCustomEntity = InitiatingIpAddress",
+        "queryFrequency": "PT31M",
+        "queryPeriod": "PT31M",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT5H",
+        "suppressionEnabled": false,
+        "tactics": [
+          "Persistence"
+        ],
+        "incidentConfiguration": {
+          "groupingConfiguration": {
+            "matchingMethod": "AllEntities",
+            "enabled": false,
+            "groupByEntities": [],
+            "lookbackDuration": "PT5H",
+            "reopenClosedIncident": false,
+            "groupByCustomDetails": [],
+            "groupByAlertDetails": []
+          },
+          "createIncident": true
+        },
+        "eventGroupingSettings": {
+          "aggregationKind": "SingleAlert"
+        },
+        "customDetails": {
+          "AddedPermission": "AddedPermission",
+          "ServicePrincipalId": "ServicePrincipalObjectID"
+        },
+        "entityMappings": [
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "AccountCustomEntity"
+              }
+            ]
+          },
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "IPCustomEntity"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

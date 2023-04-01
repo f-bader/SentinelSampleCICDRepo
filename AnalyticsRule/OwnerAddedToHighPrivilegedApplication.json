@@ -1,0 +1,70 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workspace": {
+      "type": "String"
+    }
+  },
+  "resources": [
+    {
+      "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/b6d4f7fe-2f5b-45e8-8f3d-b259ebe4100a')]",
+      "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/b6d4f7fe-2f5b-45e8-8f3d-b259ebe4100a')]",
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "kind": "Scheduled",
+      "apiVersion": "2022-10-01-preview",
+      "properties": {
+        "displayName": "Owner added to high privileged application",
+        "alertRuleTemplateName": "b6d4f7fe-2f5b-45e8-8f3d-b259ebe4100a",
+        "description": "An owner was added to application holding high privileged API permissions",
+        "severity": "Medium",
+        "enabled": true,
+        "query": "AuditLogs\n| where OperationName == \"Add owner to application\"\n| extend SearchKey = tostring(TargetResources[1].id)\n| join kind=inner _GetWatchlist('HighRiskApps') on SearchKey\n| extend TargetUser = tostring(TargetResources[0].userPrincipalName)\n| extend Actor = tostring(InitiatedBy.user.userPrincipalName)",
+        "queryFrequency": "PT30M",
+        "queryPeriod": "PT30M",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT5H",
+        "suppressionEnabled": false,
+        "tactics": [
+          "PrivilegeEscalation"
+        ],
+        "incidentConfiguration": {
+          "groupingConfiguration": {
+            "matchingMethod": "AllEntities",
+            "enabled": false,
+            "groupByEntities": [],
+            "lookbackDuration": "PT5H",
+            "reopenClosedIncident": false,
+            "groupByCustomDetails": [],
+            "groupByAlertDetails": []
+          },
+          "createIncident": true
+        },
+        "eventGroupingSettings": {
+          "aggregationKind": "AlertPerResult"
+        },
+        "entityMappings": [
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "TargetUser"
+              }
+            ]
+          },
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "Actor"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
